@@ -1,0 +1,4 @@
+sounds/*.wav
+sounds/*.mp3
+sounds/*.aiff
+.DS_Store
