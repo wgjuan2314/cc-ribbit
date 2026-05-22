@@ -13,13 +13,37 @@ Adds sound alerts and system notifications to Claude Code — a frog knocks when
 
 ## Install / 安装
 
+**Prerequisites / 前置条件**
+
+- [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code/quickstart) installed and working (run `claude` in your terminal to verify)
+- macOS or Linux
+- git
+
+已安装并能在终端正常运行 `claude` 命令即可。
+
+**Steps / 步骤**
+
 ```bash
 git clone https://github.com/wgjuan2314/cc-ribbit.git
 cd cc-ribbit
 bash install.sh
 ```
 
-Restart `claude` to activate. 重启 `claude` 后生效。
+Then quit and restart Claude Code: / 安装完成后，退出并重启 Claude Code：
+
+```bash
+# exit current session / 退出当前会话
+exit
+
+# restart / 重新启动
+claude
+```
+
+**Verify / 验证安装**
+
+Run any Claude Code task that requires permission — you should hear a frog ribbit. 🐸
+
+触发任意需要权限确认的操作，听到青蛙叫声即表示安装成功。
 
 ---
 
