@@ -1,5 +1,14 @@
 # cc-ribbit 🐸
 
+```
+    @..@         @..@    @..@
+   (----)        (-.-)  (----)
+  ( >__< )      ( -.- )( >.< )
+   ^^ ~~ ^^ ~~ ^^ ~~ ^^ ~~ ^^
+≋  ≋  ≋  ≋  ≋  ≋  ≋  ≋  ≋  ≋  ≋
+       "...you coming back or what."
+```
+
 > You went to grab coffee. Claude Code finished in 30 seconds. Then it waited for you for twenty minutes.
 
 **A frog calls you back.**
