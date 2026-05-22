@@ -3,6 +3,7 @@
 CONFIG="$HOME/.claude/cc-ribbit/config"
 SOUNDS="$HOME/.claude/cc-ribbit/sounds"
 FLAG="/tmp/cc-ribbit-waiting"
+STOP_FLAG="/tmp/cc-ribbit-stop"
 
 # shellcheck source=/dev/null
 source "$CONFIG" 2>/dev/null
@@ -89,6 +90,16 @@ play_chorus() {
   done
 }
 
+# ── 语音催促（系统语言自动切换） ─────────────────────────
+
+say_reminder() {
+  if defaults read -g AppleLanguages 2>/dev/null | grep -q '"zh'; then
+    say -v Meijia "呱，做完了，没人看" 2>/dev/null
+  else
+    say -v Samantha "Ribbit. Done. Nobody's watching." 2>/dev/null
+  fi
+}
+
 # ── 通知（仅在失焦时调用） ────────────────────────────────
 
 send_notify() {
@@ -164,6 +175,18 @@ case "$1" in
       # 失焦：无论时长都叮 + 通知
       play_ding
       send_notify "干完了，青蛙复命 🐸"
+
+      # 记录完成时间，30s 后用户还没回来就语音催
+      echo "$(date +%s)" > "$STOP_FLAG"
+      (
+        sleep 30
+        [ -f "$STOP_FLAG" ] || exit 0
+        if ! is_focused; then
+          say_reminder
+        fi
+        rm -f "$STOP_FLAG"
+      ) &
+      disown
     fi
     ;;
 
@@ -177,6 +200,6 @@ case "$1" in
     ;;
 
   cleanup)
-    rm -f "$FLAG" 2>/dev/null
+    rm -f "$FLAG" "$STOP_FLAG" 2>/dev/null
     ;;
 esac
