@@ -55,6 +55,8 @@ echo "✓ 创建目录 $INSTALL_DIR"
 
 cp "$SCRIPT_DIR/hooks/ribbit.sh" "$INSTALL_DIR/hooks/ribbit.sh"
 chmod +x "$INSTALL_DIR/hooks/ribbit.sh"
+cp "$SCRIPT_DIR/uninstall.sh" "$INSTALL_DIR/uninstall.sh"
+chmod +x "$INSTALL_DIR/uninstall.sh"
 echo "✓ 安装 hooks 脚本"
 
 # 复制音效文件（如果存在）

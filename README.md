@@ -96,7 +96,7 @@ Sound files are not bundled (license reasons). Download **CC0** files from [free
 ## Uninstall / 卸载
 
 ```bash
-bash uninstall.sh
+bash ~/.claude/cc-ribbit/uninstall.sh
 ```
 
 Removes all hooks from `~/.claude/settings.json`. The frogs retreat.  
