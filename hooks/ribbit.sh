@@ -7,6 +7,38 @@ FLAG="/tmp/cc-ribbit-waiting"
 # shellcheck source=/dev/null
 source "$CONFIG" 2>/dev/null
 
+# 在脚本入口读取 stdin（hook 数据只能读一次）
+HOOK_INPUT=$(cat 2>/dev/null)
+
+# ── 焦点检测 ────────────────────────────────────────────
+
+is_focused() {
+  if [[ "$OS_TYPE" == "macos" ]]; then
+    local frontmost
+    frontmost=$(osascript -e \
+      'tell application "System Events" to get name of first application process whose frontmost is true' \
+      2>/dev/null)
+    [[ "$frontmost" == *"Terminal"* || "$frontmost" == *"iTerm"* ||
+       "$frontmost" == *"Warp"*     || "$frontmost" == *"Alacritty"* ||
+       "$frontmost" == *"Hyper"*    || "$frontmost" == *"kitty"* ]]
+  elif [[ "$OS_TYPE" == "linux" ]]; then
+    if command -v xdotool &>/dev/null; then
+      local win_name
+      win_name=$(xdotool getactivewindow getwindowname 2>/dev/null)
+      [[ "$win_name" == *"terminal"* || "$win_name" == *"Terminal"* ||
+         "$win_name" == *"Konsole"*  || "$win_name" == *"Alacritty"* ||
+         "$win_name" == *"Hyper"*    || "$win_name" == *"kitty"* ]]
+    else
+      # Wayland 或无 xdotool：降级为全提醒模式
+      return 1
+    fi
+  else
+    return 1
+  fi
+}
+
+# ── 音效播放 ─────────────────────────────────────────────
+
 play_ribbit() {
   local rate="${1:-1.0}"
   local file="$SOUNDS/ribbit.wav"
@@ -35,17 +67,15 @@ play_meow() {
   fi
 }
 
-# 三声：依次呱呱呱，稍微加大音调差距
 play_three_ribbits() {
-  local f="$SOUNDS/ribbit.wav"
-  afplay -r 0.9  "$f" 2>/dev/null; sleep 0.3
-  afplay -r 1.1  "$f" 2>/dev/null; sleep 0.3
-  afplay -r 1.25 "$f" 2>/dev/null
+  play_ribbit 0.9;  sleep 0.3
+  play_ribbit 1.1;  sleep 0.3
+  play_ribbit 1.25
 }
 
-# 合唱团：两轮密集多音调，中间短停顿
 play_chorus() {
   local f="$SOUNDS/ribbit.wav"
+  [ ! -f "$f" ] && f="/System/Library/Sounds/Pop.aiff"
   for round in 1 2; do
     afplay -r 0.65 "$f" 2>/dev/null &
     afplay -r 1.40 "$f" 2>/dev/null &
@@ -59,7 +89,8 @@ play_chorus() {
   done
 }
 
-# 通知同步执行，确保不被父进程退出时杀掉
+# ── 通知（仅在失焦时调用） ────────────────────────────────
+
 send_notify() {
   local msg="$1"
   if [[ "$OS_TYPE" == "macos" ]]; then
@@ -69,42 +100,80 @@ send_notify() {
   fi
 }
 
+# ── 从 hook stdin 读取任务耗时 ────────────────────────────
+
+get_duration_ms() {
+  echo "$HOOK_INPUT" | python3 -c \
+    "import json,sys; d=json.load(sys.stdin); print(int(d.get('duration_ms',0)))" \
+    2>/dev/null || echo "0"
+}
+
+# ── 主逻辑 ───────────────────────────────────────────────
+
 case "$1" in
   permission)
-    # 声音先响，通知跟上，脚本快速退出让 CC 弹权限框
-    afplay -r 1.0 "$SOUNDS/ribbit.wav" 2>/dev/null &
-    send_notify "CC 在等你确认 🐸"
     echo "$(date +%s)" > "$FLAG"
 
-    # 30秒后：三声
+    if is_focused; then
+      # 焦点内：等 3 秒再呱一声，不渐强，不通知
+      (
+        sleep 3
+        [ -f "$FLAG" ] || exit 0
+        play_ribbit 1.0
+      ) &
+      disown
+    else
+      # 失焦：立刻呱 + 通知
+      play_ribbit 1.0 &
+      send_notify "CC 在等你确认 🐸"
+    fi
+
+    # t=30s：检测焦点，失焦才响
     (
       sleep 30
       [ -f "$FLAG" ] || exit 0
-      play_three_ribbits
-      send_notify "CC 还在等你... 🐸🐸🐸"
+      if ! is_focused; then
+        play_three_ribbits
+        send_notify "CC 还在等你... 🐸🐸🐸"
+      fi
     ) &
     disown
 
-    # 60秒后：合唱团
+    # t=60s：检测焦点，失焦才响
     (
       sleep 60
       [ -f "$FLAG" ] || exit 0
-      send_notify "CC 派了增援！整个池塘都来了 🐸🐸🐸🐸🐸"
-      play_chorus
+      if ! is_focused; then
+        send_notify "CC 派了增援！整个池塘都来了 🐸🐸🐸🐸🐸"
+        play_chorus
+      fi
     ) &
     disown
     ;;
 
   stop)
     rm -f "$FLAG" 2>/dev/null
-    play_ding
-    send_notify "任务完成！饭好了，来吃 🔔"
+    DURATION_MS=$(get_duration_ms)
+
+    if is_focused; then
+      # 焦点内：只有耗时 ≥ 30s 才叮，不通知
+      if [ "$DURATION_MS" -ge 30000 ]; then
+        play_ding
+      fi
+    else
+      # 失焦：无论时长都叮 + 通知
+      play_ding
+      send_notify "干完了，青蛙复命 🐸"
+    fi
     ;;
 
   error)
     rm -f "$FLAG" 2>/dev/null
     play_meow
-    send_notify "出事了，但还是可爱地告诉你 🐱"
+    # 报错无论焦点状态都响；失焦时额外弹通知
+    if ! is_focused; then
+      send_notify "出事了，但还是可爱地告诉你 🐱"
+    fi
     ;;
 
   cleanup)
