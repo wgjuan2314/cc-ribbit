@@ -16,7 +16,7 @@ Adds sound alerts and system notifications to Claude Code — a frog knocks when
 **Prerequisites / 前置条件**
 
 - [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code/quickstart) installed and working (run `claude` in your terminal to verify)
-- macOS or Linux
+- **macOS** (fully tested) or **Linux** (X11, code-complete but community-tested only)
 - git
 
 已安装并能在终端正常运行 `claude` 命令即可。
@@ -103,13 +103,15 @@ rm ~/.claude/cc-ribbit/.disabled
 
 ## Platform support / 支持平台
 
-| OS / 系统 | Audio / 音频 | Notifications / 通知 |
-|---|---|---|
-| macOS | ✅ afplay (built-in) | ✅ System notifications |
-| Linux (PulseAudio) | ✅ paplay | ✅ notify-send |
-| Linux (PipeWire) | ✅ pw-play | ✅ notify-send |
-| Linux (ALSA) | ✅ aplay | ✅ notify-send |
-| Windows | ❌ not yet | — |
+| OS / 系统 | Audio / 音频 | Notifications / 通知 | Focus detect / 焦点检测 | Siri voice / 语音催 |
+|---|---|---|---|---|
+| **macOS** (tested) | ✅ afplay | ✅ System notifications | ✅ osascript | ✅ `say` command |
+| Linux X11 (untested) | ✅ paplay / pw-play / aplay | ✅ notify-send | ⚠️ xdotool required | ❌ macOS only |
+| Linux Wayland | ✅ paplay / pw-play / aplay | ✅ notify-send | ❌ degrades to always-alert | ❌ macOS only |
+| Windows | ❌ not yet | — | — | — |
+
+> Linux support is code-complete but has not been verified by the author. PRs and bug reports from Linux users are welcome.  
+> Linux 支持代码已写好，但作者本人未在 Linux 实测。欢迎 Linux 用户反馈/PR。
 
 ---
 
