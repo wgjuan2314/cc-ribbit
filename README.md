@@ -141,7 +141,7 @@ Claude Code 的 [Hooks 系统](https://docs.anthropic.com/en/docs/claude-code/ho
 
 ## Same universe / 同一宇宙
 
-- [抽鞭子](https://github.com/oldwinter/claude-code-whip) — You whip CC into working / 你催 CC 干活
+- [OpenWhip](https://github.com/GitFrog1111/OpenWhip) — You whip CC into working / 你催 CC 干活
 - cc-ribbit — CC calls you back / CC 反过来催你
 
 ---
