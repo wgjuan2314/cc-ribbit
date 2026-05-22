@@ -18,13 +18,13 @@ with open(settings_path, 'r') as f:
     settings = json.load(f)
 
 hooks = settings.get("hooks", {})
-for key in ["PermissionRequest", "Stop", "PostToolUseFailure"]:
-    hooks.pop(key, None)
 
-if "PostToolUse" in hooks:
-    hooks["PostToolUse"] = [h for h in hooks["PostToolUse"] if "cc-ribbit" not in str(h)]
-    if not hooks["PostToolUse"]:
-        del hooks["PostToolUse"]
+# 只移除 cc-ribbit 的条目，保留其他插件的 hooks
+for key in ["PermissionRequest", "Stop", "PostToolUseFailure", "PostToolUse"]:
+    if key in hooks:
+        hooks[key] = [h for h in hooks[key] if "cc-ribbit" not in str(h)]
+        if not hooks[key]:
+            del hooks[key]
 
 settings["hooks"] = hooks
 

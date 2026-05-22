@@ -80,6 +80,12 @@ echo "✓ 写入平台配置"
 
 # ── 合并 settings.json ────────────────────────────────────
 
+# 先备份 settings.json（修复前的快照）
+if [ -f "$SETTINGS" ]; then
+  cp "$SETTINGS" "$SETTINGS.cc-ribbit.bak"
+  echo "✓ 已备份原配置到 settings.json.cc-ribbit.bak"
+fi
+
 python3 - "$SETTINGS" "$INSTALL_DIR" <<'PYTHON'
 import json, os, sys
 
@@ -94,15 +100,17 @@ else:
 
 hooks = settings.setdefault("hooks", {})
 
-hooks["PermissionRequest"] = [{"hooks": [{"type": "command", "command": f"bash {install_dir}/hooks/ribbit.sh permission"}]}]
-hooks["Stop"]               = [{"hooks": [{"type": "command", "command": f"bash {install_dir}/hooks/ribbit.sh stop"}]}]
-hooks["PostToolUseFailure"] = [{"hooks": [{"type": "command", "command": f"bash {install_dir}/hooks/ribbit.sh error"}]}]
+# 追加式注册：不覆盖其他插件的 hooks，重复安装也不会产生重复项
+def ensure_hook(event, action):
+    cmd = f"bash {install_dir}/hooks/ribbit.sh {action}"
+    arr = hooks.setdefault(event, [])
+    if not any("cc-ribbit" in str(h) for h in arr):
+        arr.append({"hooks": [{"type": "command", "command": cmd}]})
 
-# PostToolUse：清理 flag（去重后追加）
-post = hooks.setdefault("PostToolUse", [])
-cleanup_cmd = f"bash {install_dir}/hooks/ribbit.sh cleanup"
-if not any("cc-ribbit" in str(h) for h in post):
-    post.append({"hooks": [{"type": "command", "command": cleanup_cmd}]})
+ensure_hook("PermissionRequest", "permission")
+ensure_hook("Stop", "stop")
+ensure_hook("PostToolUseFailure", "error")
+ensure_hook("PostToolUse", "cleanup")
 
 os.makedirs(os.path.dirname(settings_path), exist_ok=True)
 with open(settings_path, 'w') as f:
