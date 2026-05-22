@@ -11,6 +11,10 @@ source "$CONFIG" 2>/dev/null
 # 在脚本入口读取 stdin（hook 数据只能读一次）
 HOOK_INPUT=$(cat 2>/dev/null)
 
+# 语言检测结果在顶层计算一次并 export，子进程直接继承，避免重复 fork
+defaults read -g AppleLanguages 2>/dev/null | grep -q '"zh' && IS_CHINESE=1 || IS_CHINESE=0
+export IS_CHINESE
+
 # ── 焦点检测 ────────────────────────────────────────────
 
 is_focused() {
@@ -90,19 +94,11 @@ play_chorus() {
   done
 }
 
-# ── 系统语言检测 ─────────────────────────────────────────
-
-is_chinese() {
-  defaults read -g AppleLanguages 2>/dev/null | grep -q '"zh'
-}
-
 # ── 双语通知（仅在失焦时调用） ────────────────────────────
 
 send_notify() {
-  local zh="$1"
-  local en="$2"
   local msg
-  is_chinese && msg="$zh" || msg="$en"
+  [[ "$IS_CHINESE" == 1 ]] && msg="$1" || msg="$2"
 
   if [[ "$OS_TYPE" == "macos" ]]; then
     osascript -e "display notification \"$msg\" with title \"cc-ribbit 🐸\"" 2>/dev/null
@@ -111,10 +107,11 @@ send_notify() {
   fi
 }
 
-# ── 语音催促（系统语言自动切换） ─────────────────────────
+# ── 语音催促（macOS 专属，系统语言自动切换） ──────────────
 
 say_reminder() {
-  if is_chinese; then
+  [[ "$OS_TYPE" == "macos" ]] || return 0
+  if [[ "$IS_CHINESE" == 1 ]]; then
     say -v Meijia "呱，做完了，没人看" 2>/dev/null
   else
     say -v Samantha "Ribbit. Done. Nobody's watching." 2>/dev/null
@@ -133,26 +130,24 @@ get_duration_ms() {
 
 case "$1" in
   permission)
-    echo "$(date +%s)" > "$FLAG"
+    FLAG_TS=$(date +%s)
+    echo "$FLAG_TS" > "$FLAG"
 
     if is_focused; then
-      # 焦点内：等 3 秒再呱一声，不渐强，不通知
       (
         sleep 3
-        [ -f "$FLAG" ] || exit 0
+        [[ "$(cat "$FLAG" 2>/dev/null)" == "$FLAG_TS" ]] || exit 0
         play_ribbit 1.0
       ) &
       disown
     else
-      # 失焦：立刻呱 + 通知
       play_ribbit 1.0 &
       send_notify "CC 在等你确认 🐸" "CC is waiting for you 🐸"
     fi
 
-    # t=30s：检测焦点，失焦才响
     (
       sleep 30
-      [ -f "$FLAG" ] || exit 0
+      [[ "$(cat "$FLAG" 2>/dev/null)" == "$FLAG_TS" ]] || exit 0
       if ! is_focused; then
         play_three_ribbits
         send_notify "CC 还在等你... 🐸🐸🐸" "Hello? Still there? 🐸🐸🐸"
@@ -160,10 +155,9 @@ case "$1" in
     ) &
     disown
 
-    # t=60s：检测焦点，失焦才响
     (
       sleep 60
-      [ -f "$FLAG" ] || exit 0
+      [[ "$(cat "$FLAG" 2>/dev/null)" == "$FLAG_TS" ]] || exit 0
       if ! is_focused; then
         send_notify "CC 派了增援！整个池塘都来了 🐸🐸🐸🐸🐸" "CC called for backup. The whole pond is here. 🐸🐸🐸🐸🐸"
         play_chorus
@@ -176,27 +170,21 @@ case "$1" in
     rm -f "$FLAG" 2>/dev/null
     DURATION_MS=$(get_duration_ms)
 
-    if is_focused; then
-      # 焦点内：只有耗时 ≥ 30s 才叮，不通知
-      if [ "$DURATION_MS" -ge 30000 ]; then
-        play_ding
-      fi
-    else
-      # 失焦：无论时长都叮 + 通知
+    if ! is_focused; then
       play_ding
       send_notify "干完了，青蛙复命 🐸" "Mission complete. Frog reporting back. 🐸"
 
-      # 记录完成时间，30s 后用户还没回来就语音催
-      echo "$(date +%s)" > "$STOP_FLAG"
+      STOP_TS=$(date +%s)
+      echo "$STOP_TS" > "$STOP_FLAG"
       (
         sleep 30
-        [ -f "$STOP_FLAG" ] || exit 0
-        if ! is_focused; then
-          say_reminder
-        fi
+        [[ "$(cat "$STOP_FLAG" 2>/dev/null)" == "$STOP_TS" ]] || exit 0
+        is_focused || say_reminder
         rm -f "$STOP_FLAG"
       ) &
       disown
+    elif [ "$DURATION_MS" -ge 30000 ]; then
+      play_ding
     fi
     ;;
 
