@@ -90,24 +90,34 @@ play_chorus() {
   done
 }
 
-# ── 语音催促（系统语言自动切换） ─────────────────────────
+# ── 系统语言检测 ─────────────────────────────────────────
 
-say_reminder() {
-  if defaults read -g AppleLanguages 2>/dev/null | grep -q '"zh'; then
-    say -v Meijia "呱，做完了，没人看" 2>/dev/null
-  else
-    say -v Samantha "Ribbit. Done. Nobody's watching." 2>/dev/null
-  fi
+is_chinese() {
+  defaults read -g AppleLanguages 2>/dev/null | grep -q '"zh'
 }
 
-# ── 通知（仅在失焦时调用） ────────────────────────────────
+# ── 双语通知（仅在失焦时调用） ────────────────────────────
 
 send_notify() {
-  local msg="$1"
+  local zh="$1"
+  local en="$2"
+  local msg
+  is_chinese && msg="$zh" || msg="$en"
+
   if [[ "$OS_TYPE" == "macos" ]]; then
     osascript -e "display notification \"$msg\" with title \"cc-ribbit 🐸\"" 2>/dev/null
   elif [[ "$NOTIFY_CMD" == "notify-send" ]]; then
     notify-send "cc-ribbit 🐸" "$msg" 2>/dev/null
+  fi
+}
+
+# ── 语音催促（系统语言自动切换） ─────────────────────────
+
+say_reminder() {
+  if is_chinese; then
+    say -v Meijia "呱，做完了，没人看" 2>/dev/null
+  else
+    say -v Samantha "Ribbit. Done. Nobody's watching." 2>/dev/null
   fi
 }
 
@@ -136,7 +146,7 @@ case "$1" in
     else
       # 失焦：立刻呱 + 通知
       play_ribbit 1.0 &
-      send_notify "CC 在等你确认 🐸"
+      send_notify "CC 在等你确认 🐸" "CC is waiting for you 🐸"
     fi
 
     # t=30s：检测焦点，失焦才响
@@ -145,7 +155,7 @@ case "$1" in
       [ -f "$FLAG" ] || exit 0
       if ! is_focused; then
         play_three_ribbits
-        send_notify "CC 还在等你... 🐸🐸🐸"
+        send_notify "CC 还在等你... 🐸🐸🐸" "Hello? Still there? 🐸🐸🐸"
       fi
     ) &
     disown
@@ -155,7 +165,7 @@ case "$1" in
       sleep 60
       [ -f "$FLAG" ] || exit 0
       if ! is_focused; then
-        send_notify "CC 派了增援！整个池塘都来了 🐸🐸🐸🐸🐸"
+        send_notify "CC 派了增援！整个池塘都来了 🐸🐸🐸🐸🐸" "CC called for backup. The whole pond is here. 🐸🐸🐸🐸🐸"
         play_chorus
       fi
     ) &
@@ -174,7 +184,7 @@ case "$1" in
     else
       # 失焦：无论时长都叮 + 通知
       play_ding
-      send_notify "干完了，青蛙复命 🐸"
+      send_notify "干完了，青蛙复命 🐸" "Mission complete. Frog reporting back. 🐸"
 
       # 记录完成时间，30s 后用户还没回来就语音催
       echo "$(date +%s)" > "$STOP_FLAG"
@@ -195,7 +205,7 @@ case "$1" in
     play_meow
     # 报错无论焦点状态都响；失焦时额外弹通知
     if ! is_focused; then
-      send_notify "出事了，但还是可爱地告诉你 🐱"
+      send_notify "出事了，但还是可爱地告诉你 🐱" "Something broke. Cutely. 🐱"
     fi
     ;;
 
