@@ -39,7 +39,7 @@ fi
 
 # 删除安装目录
 rm -rf "$INSTALL_DIR"
-rm -f /tmp/cc-ribbit-waiting
+rm -f /tmp/cc-ribbit-waiting /tmp/cc-ribbit-stop
 echo "✓ 删除安装文件"
 
 echo ""

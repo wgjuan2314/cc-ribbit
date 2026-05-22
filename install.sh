@@ -65,7 +65,7 @@ for sound in ribbit.wav ding.wav meow.wav; do
     cp "$SCRIPT_DIR/sounds/$sound" "$INSTALL_DIR/sounds/$sound"
     echo "✓ 复制音效 $sound"
   else
-    echo "  ℹ  $sound 未找到，将使用系统默认音效（见 sounds/README.md）"
+    echo "  ℹ  $sound 未找到，将使用系统默认音效"
   fi
 done
 
@@ -119,7 +119,13 @@ echo " (----)"
 echo "( >__< )   安装完成！重启 claude 后生效。"
 echo "^^ ~~ ^^"
 echo ""
-echo "🐸 CC 现在会催你了。"
+echo "🐸 CC 现在会催你了。 / CC will now call you back."
 echo ""
-echo "   卸载：bash $SCRIPT_DIR/uninstall.sh"
+echo "   卸载 / Uninstall: bash ~/.claude/cc-ribbit/uninstall.sh"
 echo ""
+
+# 播放一声青蛙验证安装成功
+if [[ "$OS_TYPE" == "macos" ]]; then
+  f="$INSTALL_DIR/sounds/ribbit.wav"
+  [ -f "$f" ] && afplay "$f" 2>/dev/null || afplay "/System/Library/Sounds/Pop.aiff" 2>/dev/null
+fi

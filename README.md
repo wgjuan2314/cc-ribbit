@@ -68,16 +68,12 @@ Run any Claude Code task that requires permission — you should hear a frog rib
 
 ## Sound files / 音效文件
 
-Sound files are not bundled (license reasons). Download **CC0** files from [freesound.org](https://freesound.org) and place them in `sounds/`:
+Sound files (`ribbit.wav`, `meow.wav`) are included in the repo (CC0 licensed, sourced from [freesound.org](https://freesound.org)). No extra steps needed.
 
-项目不内置音效（避免版权问题）。请从 [freesound.org](https://freesound.org) 下载 **CC0 授权**文件放到 `sounds/` 目录：
+音效文件（`ribbit.wav`、`meow.wav`）已内置在仓库中（CC0 授权，来自 [freesound.org](https://freesound.org)），无需额外下载。
 
-- `ribbit.wav` — search `frog ribbit single`
-- `ding.wav` — search `microwave ding`
-- `meow.wav` — search `cat meow single`
-
-**macOS users**: works out of the box with system fallback sounds.  
-**macOS 用户**：不放文件也能用，自动 fallback 到系统音效。
+**macOS users**: if sound files are missing for any reason, the installer automatically falls back to built-in system sounds.  
+**macOS 用户**：若音效文件缺失，安装程序自动 fallback 到系统内置音效。
 
 ---
 
