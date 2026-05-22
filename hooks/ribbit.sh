@@ -11,8 +11,8 @@ source "$CONFIG" 2>/dev/null
 # 在脚本入口读取 stdin（hook 数据只能读一次）
 HOOK_INPUT=$(cat 2>/dev/null)
 
-# 语言检测结果在顶层计算一次并 export，子进程直接继承，避免重复 fork
-defaults read -g AppleLanguages 2>/dev/null | grep -q '"zh' && IS_CHINESE=1 || IS_CHINESE=0
+# config 未显式设置时才自动检测；config 设置可覆盖（方便测试）
+[[ -z "${IS_CHINESE+x}" ]] && { defaults read -g AppleLanguages 2>/dev/null | grep -q '"zh' && IS_CHINESE=1 || IS_CHINESE=0; }
 export IS_CHINESE
 
 # ── 焦点检测 ────────────────────────────────────────────
