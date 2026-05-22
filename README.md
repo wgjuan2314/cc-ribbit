@@ -1,9 +1,9 @@
 # cc-ribbit 🐸
 
-> You whipped Claude Code into working. CC finished. Then it waited for you for twenty minutes.  
-> 你装了[抽鞭子](https://github.com/oldwinter/claude-code-whip)让 CC 干活。CC 干完了。然后它等了你二十分钟。
+> You went to grab coffee. Claude Code finished in 30 seconds. Then it waited for you for twenty minutes.  
+> 你切去喝杯咖啡。Claude Code 30 秒就干完了。然后它等了你二十分钟。
 
-**CC learned. Now it calls you back.**
+**A frog calls you back.**
 
 Adds sound alerts and system notifications to Claude Code — a frog knocks when CC needs confirmation, a ding when the task is done, and if you're still away after 30 seconds, Siri starts talking.
 
@@ -74,6 +74,30 @@ Sound files (`ribbit.wav`, `meow.wav`) are included in the repo (CC0 licensed, s
 
 **macOS users**: if sound files are missing for any reason, the installer automatically falls back to built-in system sounds.  
 **macOS 用户**：若音效文件缺失，安装程序自动 fallback 到系统内置音效。
+
+---
+
+## Customize / 自定义
+
+**Change sounds / 换声音**
+
+Replace the `.wav` files in `~/.claude/cc-ribbit/sounds/` with your own. Keep the same filenames (`ribbit.wav`, `ding.wav`, `meow.wav`). Takes effect on next event, no restart needed.
+
+把 `~/.claude/cc-ribbit/sounds/` 里的 `.wav` 文件换成你想要的（保持同名）。下次事件触发即生效，无需重启。
+
+**Temporarily disable / 临时关闭**
+
+When you don't want sounds (in a meeting, etc.):
+
+不想要提示音时（开会等）：
+
+```bash
+# Disable / 关闭
+touch ~/.claude/cc-ribbit/.disabled
+
+# Re-enable / 恢复
+rm ~/.claude/cc-ribbit/.disabled
+```
 
 ---
 

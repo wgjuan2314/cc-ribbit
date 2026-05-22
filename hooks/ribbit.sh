@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# 用户临时关闭开关：存在 .disabled 文件则直接退出
+[ -f "$HOME/.claude/cc-ribbit/.disabled" ] && exit 0
+
 CONFIG="$HOME/.claude/cc-ribbit/config"
 SOUNDS="$HOME/.claude/cc-ribbit/sounds"
 FLAG="/tmp/cc-ribbit-waiting"
