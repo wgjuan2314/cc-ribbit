@@ -11,6 +11,9 @@ STOP_FLAG="/tmp/cc-ribbit-stop"
 # shellcheck source=/dev/null
 source "$CONFIG" 2>/dev/null
 
+# config 加载失败时的安全默认值
+OS_TYPE="${OS_TYPE:-macos}"
+
 # 在脚本入口读取 stdin（hook 数据只能读一次）
 HOOK_INPUT=$(cat 2>/dev/null)
 
@@ -28,14 +31,18 @@ is_focused() {
       2>/dev/null)
     [[ "$frontmost" == *"Terminal"* || "$frontmost" == *"iTerm"* ||
        "$frontmost" == *"Warp"*     || "$frontmost" == *"Alacritty"* ||
-       "$frontmost" == *"Hyper"*    || "$frontmost" == *"kitty"* ]]
+       "$frontmost" == *"Hyper"*    || "$frontmost" == *"kitty"* ||
+       "$frontmost" == *"Ghostty"*  || "$frontmost" == *"WezTerm"* ||
+       "$frontmost" == *"Tabby"*    || "$frontmost" == *"Rio"* ]]
   elif [[ "$OS_TYPE" == "linux" ]]; then
     if command -v xdotool &>/dev/null; then
       local win_name
       win_name=$(xdotool getactivewindow getwindowname 2>/dev/null)
       [[ "$win_name" == *"terminal"* || "$win_name" == *"Terminal"* ||
          "$win_name" == *"Konsole"*  || "$win_name" == *"Alacritty"* ||
-         "$win_name" == *"Hyper"*    || "$win_name" == *"kitty"* ]]
+         "$win_name" == *"Hyper"*    || "$win_name" == *"kitty"* ||
+         "$win_name" == *"Ghostty"*  || "$win_name" == *"WezTerm"* ||
+         "$win_name" == *"Tabby"*    || "$win_name" == *"Rio"* ]]
     else
       # Wayland 或无 xdotool：降级为全提醒模式
       return 1
@@ -47,32 +54,33 @@ is_focused() {
 
 # ── 音效播放 ─────────────────────────────────────────────
 
+_play() {
+  local file="$1" rate="${2:-}"
+  [ -f "$file" ] || return 1
+  if [[ "$OS_TYPE" == "macos" ]]; then
+    [[ -n "$rate" ]] && afplay -r "$rate" "$file" 2>/dev/null || afplay "$file" 2>/dev/null
+  elif [[ -n "$PLAY_CMD" ]]; then
+    "$PLAY_CMD" "$file" 2>/dev/null
+  fi
+}
+
 play_ribbit() {
   local rate="${1:-1.0}"
-  local file="$SOUNDS/ribbit.wav"
-  if [ -f "$file" ]; then
-    afplay -r "$rate" "$file" 2>/dev/null
-  else
-    afplay "/System/Library/Sounds/Pop.aiff" 2>/dev/null
-  fi
+  _play "$SOUNDS/ribbit.wav" "$rate" || {
+    [[ "$OS_TYPE" == "macos" ]] && afplay "/System/Library/Sounds/Pop.aiff" 2>/dev/null
+  }
 }
 
 play_ding() {
-  local file="$SOUNDS/ding.wav"
-  if [ -f "$file" ]; then
-    afplay "$file" 2>/dev/null
-  else
-    afplay "/System/Library/Sounds/Glass.aiff" 2>/dev/null
-  fi
+  _play "$SOUNDS/ding.wav" || {
+    [[ "$OS_TYPE" == "macos" ]] && afplay "/System/Library/Sounds/Glass.aiff" 2>/dev/null
+  }
 }
 
 play_meow() {
-  local file="$SOUNDS/meow.wav"
-  if [ -f "$file" ]; then
-    afplay "$file" 2>/dev/null
-  else
-    afplay "/System/Library/Sounds/Purr.aiff" 2>/dev/null
-  fi
+  _play "$SOUNDS/meow.wav" || {
+    [[ "$OS_TYPE" == "macos" ]] && afplay "/System/Library/Sounds/Purr.aiff" 2>/dev/null
+  }
 }
 
 play_three_ribbits() {
@@ -83,18 +91,23 @@ play_three_ribbits() {
 
 play_chorus() {
   local f="$SOUNDS/ribbit.wav"
-  [ ! -f "$f" ] && f="/System/Library/Sounds/Pop.aiff"
-  for round in 1 2; do
-    afplay -r 0.65 "$f" 2>/dev/null &
-    afplay -r 1.40 "$f" 2>/dev/null &
-    afplay -r 1.0  "$f" 2>/dev/null &
-    sleep 0.04; afplay -r 0.78 "$f" 2>/dev/null &
-    sleep 0.03; afplay -r 1.28 "$f" 2>/dev/null &
-    sleep 0.07; afplay -r 0.85 "$f" 2>/dev/null &
-    sleep 0.02; afplay -r 1.15 "$f" 2>/dev/null &
+  if [[ "$OS_TYPE" == "macos" ]]; then
+    [ -f "$f" ] || f="/System/Library/Sounds/Pop.aiff"
+    for round in 1 2; do
+      afplay -r 0.65 "$f" 2>/dev/null &
+      afplay -r 1.40 "$f" 2>/dev/null &
+      afplay -r 1.0  "$f" 2>/dev/null &
+      sleep 0.04; afplay -r 0.78 "$f" 2>/dev/null &
+      sleep 0.03; afplay -r 1.28 "$f" 2>/dev/null &
+      sleep 0.07; afplay -r 0.85 "$f" 2>/dev/null &
+      sleep 0.02; afplay -r 1.15 "$f" 2>/dev/null &
+      wait
+      sleep 0.25
+    done
+  elif [[ -n "$PLAY_CMD" && -f "$f" ]]; then
+    for i in $(seq 7); do "$PLAY_CMD" "$f" 2>/dev/null & done
     wait
-    sleep 0.25
-  done
+  fi
 }
 
 # ── 双语通知（仅在失焦时调用） ────────────────────────────
@@ -115,16 +128,18 @@ send_notify() {
 say_reminder() {
   [[ "$OS_TYPE" == "macos" ]] || return 0
   if [[ "$IS_CHINESE" == 1 ]]; then
-    say -v Meijia "呱，做完了，没人看" 2>/dev/null
+    say -v Meijia "呱，做完了，没人看" 2>/dev/null || say "呱，做完了，没人看" 2>/dev/null
   else
-    say -v Samantha "Ribbit. Done. Nobody's watching." 2>/dev/null
+    say -v Samantha "Ribbit. Done. Nobody's watching." 2>/dev/null || say "Ribbit. Done. Nobody's watching." 2>/dev/null
   fi
 }
 
 # ── 从 hook stdin 读取任务耗时 ────────────────────────────
 
 get_duration_ms() {
-  echo "$HOOK_INPUT" | python3 -c \
+  local py
+  py=$(command -v python3 2>/dev/null || echo "/usr/bin/python3")
+  echo "$HOOK_INPUT" | "$py" -c \
     "import json,sys; d=json.load(sys.stdin); print(int(d.get('duration_ms',0)))" \
     2>/dev/null || echo "0"
 }
